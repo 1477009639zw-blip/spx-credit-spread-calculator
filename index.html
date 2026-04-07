@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SPX 信用价差策略计算器</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">SPX Intraday Credit Spread</p>
+          <h1>SPX 日内 Credit Spread 策略计算器</h1>
+          <p class="hero-text">
+            输入 SPX 昨收、VIX1D 昨收和今日开盘价，自动计算 expected move、方向判断、override 规则、最终 OTM 和今日策略点位。
+          </p>
+          <div class="hero-badges">
+            <span>k = 1.2</span>
+            <span>VIX1D &lt; 15 可触发 CALL override</span>
+            <span>PUT 最低 OTM 2.0%</span>
+            <span>CALL 最低 OTM 1.5%</span>
+          </div>
+        </div>
+        <div class="hero-panel">
+          <div class="panel-label">核心逻辑</div>
+          <p>先用 VIX1D 推导 expected move，再按 gap 分档决定 a，最后应用低波动 override 与 OTM 底线。</p>
+          <div class="formula-pill">
+            <span>expected move</span>
+            <strong>(VIX1D / 100) / √252 × 1.2 × a</strong>
+          </div>
+        </div>
+      </header>
+
+      <main class="layout-grid">
+        <section class="card form-card">
+          <div class="section-head">
+            <h2>输入参数</h2>
+            <p>以昨收和今日开盘价为基础，自动判断 gap 方向与 override。</p>
+          </div>
+
+          <form id="calculator-form" novalidate>
+            <label class="field">
+              <span>SPX 昨日收盘价</span>
+              <input id="spx-prev-close" name="spxPrevClose" type="number" min="0" step="0.01" inputmode="decimal" required />
+            </label>
+
+            <label class="field">
+              <span>VIX1D 昨日收盘价</span>
+              <input id="vix-prev-close" name="prevVixClose" type="number" min="0" step="0.01" inputmode="decimal" required />
+            </label>
+
+            <label class="field">
+              <span>SPX 今日开盘价</span>
+              <input id="spx-open" name="spxOpen" type="number" min="0" step="0.01" inputmode="decimal" required />
+            </label>
+
+            <div class="button-row">
+              <button type="submit" class="primary-button">计算今日策略</button>
+              <button type="button" class="secondary-button" id="load-example">加载示例</button>
+              <button type="button" class="ghost-button" id="load-low-vix-example">低 VIX Override 示例</button>
+            </div>
+          </form>
+
+          <section class="memory-panel">
+            <div class="memory-head">
+              <div>
+                <h3>当日记录记忆</h3>
+                <p>把今天输入过的昨收、开盘和 VIX1D 保存在当前浏览器，之后点一下就能重新载入。</p>
+              </div>
+            </div>
+
+            <div class="memory-controls">
+              <label class="field compact-field">
+                <span>记录日期</span>
+                <input id="record-date" name="recordDate" type="date" />
+              </label>
+              <button type="button" class="secondary-button save-record-button" id="save-record">保存当前为当日记录</button>
+            </div>
+
+            <label class="field compact-field note-field">
+              <span>备注</span>
+              <textarea id="record-note" name="recordNote" rows="3" placeholder="例如：CPI 日、盘前跳空大、主观上更偏向看震荡。"></textarea>
+            </label>
+
+            <div class="export-row">
+              <button type="button" class="ghost-button" id="export-csv">导出所有记录 CSV</button>
+              <button type="button" class="ghost-button" id="export-excel">导出所有记录 Excel</button>
+            </div>
+
+            <p class="memory-tip">同一日期再次保存会自动覆盖更新。</p>
+            <div class="info-banner hidden" id="save-feedback"></div>
+
+            <div class="saved-records-empty" id="saved-records-empty">还没有保存过记录。</div>
+            <div class="saved-records-list" id="saved-records-list"></div>
+          </section>
+
+          <div class="input-hints">
+            <div>
+              <strong>分档说明</strong>
+              <p>边界默认按“落在上限仍归前一档”处理，例如 1.50% 归入 a = 2.0，2.00% 归入 a = 2.5。</p>
+            </div>
+            <div>
+              <strong>平开处理</strong>
+              <p>若开盘价不高于昨收，默认归入非高开侧；若同时 VIX1D &lt; 15 且未触发 -0.5% 豁免，则仍改为 CALL。</p>
+            </div>
+          </div>
+
+          <div class="error-banner hidden" id="error-banner"></div>
+        </section>
+
+        <section class="card result-card">
+          <div class="section-head">
+            <h2>今日结果</h2>
+            <p>主结果默认显示“精确公式点位”，并同时给出两种 5 点取整口径作参考。</p>
+          </div>
+
+          <div class="headline-result">
+            <div>
+              <p class="label">策略方向</p>
+              <div class="direction-wrap">
+                <span id="trade-side-badge" class="direction-badge">CALL</span>
+                <span id="direction-source-badge" class="source-badge">Gap Rule</span>
+              </div>
+            </div>
+            <div>
+              <p class="label">精确公式点位</p>
+              <p class="main-number" id="exact-target">-</p>
+            </div>
+            <div>
+              <p class="label">最终 OTM</p>
+              <p class="main-number compact" id="final-otm">-</p>
+            </div>
+          </div>
+
+          <div class="override-banner" id="override-banner">
+            低 VIX override / 豁免状态会显示在这里
+          </div>
+
+          <div class="strike-grid">
+            <article class="mini-card">
+              <p class="label">精确公式点位</p>
+              <strong id="exact-point-card">-</strong>
+              <span>直接使用公式输出，不做行权价取整</span>
+            </article>
+            <article class="mini-card accent">
+              <p class="label">向外保守 5 点</p>
+              <strong id="outer-strike-card">-</strong>
+              <span>CALL 向上取整，PUT 向下取整</span>
+            </article>
+            <article class="mini-card">
+              <p class="label">向内 5 点</p>
+              <strong id="inner-strike-card">-</strong>
+              <span>CALL 向下取整，PUT 向上取整</span>
+            </article>
+          </div>
+
+          <div class="narrative-card" id="narrative-card"></div>
+        </section>
+      </main>
+
+      <section class="card breakdown-card">
+        <div class="section-head">
+          <h2>公式拆解</h2>
+          <p>逐步展示从 VIX1D 到最终策略点位的每一层计算。</p>
+        </div>
+
+        <div class="breakdown-grid">
+          <article class="metric-card">
+            <span>Gap 幅度</span>
+            <strong id="gap-pct">-</strong>
+            <small id="gap-bucket">-</small>
+          </article>
+          <article class="metric-card">
+            <span>基础 expected move</span>
+            <strong id="base-expected-move">-</strong>
+            <small>(VIX1D / 100) / √252</small>
+          </article>
+          <article class="metric-card">
+            <span>乘上 k = 1.2</span>
+            <strong id="after-k-move">-</strong>
+            <small>expected move × 1.2</small>
+          </article>
+          <article class="metric-card">
+            <span>a 值</span>
+            <strong id="a-multiplier">-</strong>
+            <small id="a-description">-</small>
+          </article>
+          <article class="metric-card">
+            <span>Raw OTM</span>
+            <strong id="raw-otm">-</strong>
+            <small>after k × a</small>
+          </article>
+          <article class="metric-card">
+            <span>OTM 底线</span>
+            <strong id="otm-floor">-</strong>
+            <small id="floor-reason">-</small>
+          </article>
+        </div>
+      </section>
+
+      <section class="card reference-card">
+        <div class="section-head">
+          <h2>昨收固定价外参考点位</h2>
+          <p>基于 SPX 昨收，额外给出固定涨跌幅的参考价位，便于快速对照常用 OTM 距离。</p>
+        </div>
+
+        <div class="reference-table-wrap">
+          <table class="reference-table">
+            <thead>
+              <tr>
+                <th>价外幅度</th>
+                <th>下跌参考位</th>
+                <th>上涨参考位</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1.5%</td>
+                <td id="down-1_5-level">-</td>
+                <td id="up-1_5-level">-</td>
+              </tr>
+              <tr>
+                <td>2.0%</td>
+                <td id="down-2_0-level">-</td>
+                <td id="up-2_0-level">-</td>
+              </tr>
+              <tr>
+                <td>2.5%</td>
+                <td id="down-2_5-level">-</td>
+                <td id="up-2_5-level">-</td>
+              </tr>
+              <tr>
+                <td>3.0%</td>
+                <td id="down-3_0-level">-</td>
+                <td id="up-3_0-level">-</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card explanation-card">
+        <div class="section-head">
+          <h2>规则速览</h2>
+          <p>方便你快速核对今天的输入有没有触发特殊逻辑。</p>
+        </div>
+
+        <div class="rules-grid">
+          <article>
+            <h3>方向规则</h3>
+            <p>正常情况下，gap down 做 PUT credit spread，gap up 做 CALL credit spread。</p>
+          </article>
+          <article>
+            <h3>低 VIX Override</h3>
+            <p>若 t-1 VIX1D &lt; 15，除非 gap down 超过 -0.5%，否则固定只做 CALL credit spread。</p>
+          </article>
+          <article>
+            <h3>OTM 底线</h3>
+            <p>实际 PUT 至少 2.0% OTM，实际 CALL 至少 1.5% OTM。若公式算出来更近，就自动抬到最低距离。</p>
+          </article>
+          <article>
+            <h3>取整口径</h3>
+            <p>页面主结果采用精确点位，同时额外给出向外保守和向内 5 点取整，避免口径混淆。</p>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <noscript>这个计算器需要启用 JavaScript 才能使用。</noscript>
+
+    <script src="./core.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
