@@ -29,6 +29,7 @@
   var STORAGE_KEY = "spx-credit-spread-calculator-records-v1";
   var SUPABASE_URL = "https://frnrhycstwiezcifktnh.supabase.co";
   var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_-xXAZ7HC7MSNZcYSRap5mw_hIR_N4fN";
+  var PUBLIC_APP_URL = "https://1477009639zw-blip.github.io/spx-credit-spread-calculator/";
   var CLOUD_TABLE = "spx_credit_spread_records";
   var cloudClient = null;
   var cloudSession = null;
@@ -185,7 +186,7 @@
       var response = await cloudClient.auth.signInWithOtp({
         email: email,
         options: {
-          emailRedirectTo: window.location.origin + window.location.pathname
+          emailRedirectTo: PUBLIC_APP_URL
         }
       });
 
