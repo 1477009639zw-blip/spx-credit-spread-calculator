@@ -88,7 +88,31 @@
               <button type="button" class="ghost-button" id="export-excel">导出所有记录 Excel</button>
             </div>
 
-            <p class="memory-tip">同一日期再次保存会自动覆盖更新。</p>
+            <section class="cloud-panel" aria-label="Supabase 云端同步">
+              <div class="cloud-head">
+                <div>
+                  <h4>云端同步</h4>
+                  <p>用 Supabase Auth 登录后，可把记录同步到云端，换设备也能载入同一批记录。</p>
+                </div>
+                <span class="cloud-status-badge" id="cloud-status-badge">未连接</span>
+              </div>
+
+              <label class="field compact-field">
+                <span>登录邮箱</span>
+                <input id="cloud-email" name="cloudEmail" type="email" inputmode="email" placeholder="输入你的邮箱，接收登录链接" />
+              </label>
+
+              <div class="cloud-actions">
+                <button type="button" class="secondary-button" id="cloud-login">发送登录链接</button>
+                <button type="button" class="ghost-button" id="cloud-load">从云端载入</button>
+                <button type="button" class="ghost-button" id="cloud-upload">上传本地记录</button>
+                <button type="button" class="text-button" id="cloud-logout">退出云端</button>
+              </div>
+
+              <p class="cloud-user" id="cloud-user">Supabase 项目已配置，等待登录。</p>
+            </section>
+
+            <p class="memory-tip">同一日期再次保存会自动覆盖更新。本地记录仍会保存在当前浏览器；登录后才会额外同步到 Supabase。</p>
             <div class="info-banner hidden" id="save-feedback"></div>
 
             <div class="saved-records-empty" id="saved-records-empty">还没有保存过记录。</div>
@@ -269,6 +293,7 @@
 
     <noscript>这个计算器需要启用 JavaScript 才能使用。</noscript>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./core.js"></script>
     <script src="./app.js"></script>
   </body>

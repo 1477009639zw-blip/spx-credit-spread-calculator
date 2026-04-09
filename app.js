@@ -16,10 +16,22 @@
   var saveRecordButton = document.getElementById("save-record");
   var exportCsvButton = document.getElementById("export-csv");
   var exportExcelButton = document.getElementById("export-excel");
+  var cloudEmailInput = document.getElementById("cloud-email");
+  var cloudLoginButton = document.getElementById("cloud-login");
+  var cloudLoadButton = document.getElementById("cloud-load");
+  var cloudUploadButton = document.getElementById("cloud-upload");
+  var cloudLogoutButton = document.getElementById("cloud-logout");
+  var cloudStatusBadge = document.getElementById("cloud-status-badge");
+  var cloudUser = document.getElementById("cloud-user");
   var saveFeedback = document.getElementById("save-feedback");
   var savedRecordsList = document.getElementById("saved-records-list");
   var savedRecordsEmpty = document.getElementById("saved-records-empty");
   var STORAGE_KEY = "spx-credit-spread-calculator-records-v1";
+  var SUPABASE_URL = "https://frnrhycstwiezcifktnh.supabase.co";
+  var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_-xXAZ7HC7MSNZcYSRap5mw_hIR_N4fN";
+  var CLOUD_TABLE = "spx_credit_spread_records";
+  var cloudClient = null;
+  var cloudSession = null;
   var lastCalculatedResult = null;
 
   var fields = {
@@ -94,6 +106,204 @@
     saveFeedback.classList.remove("hidden");
   }
 
+  function setCloudBusy(isBusy) {
+    [cloudLoginButton, cloudLoadButton, cloudUploadButton, cloudLogoutButton].forEach(function (button) {
+      button.disabled = isBusy;
+    });
+  }
+
+  function setCloudStatus(message, isConnected) {
+    cloudStatusBadge.textContent = message;
+    cloudStatusBadge.className = "cloud-status-badge" + (isConnected ? " connected" : "");
+  }
+
+  function updateCloudUi() {
+    if (!cloudClient) {
+      setCloudStatus("未连接", false);
+      cloudUser.textContent = "Supabase SDK 未加载，云端同步暂不可用。";
+      cloudLoadButton.disabled = true;
+      cloudUploadButton.disabled = true;
+      cloudLogoutButton.disabled = true;
+      return;
+    }
+
+    if (cloudSession && cloudSession.user) {
+      setCloudStatus("已登录", true);
+      cloudUser.textContent = "当前云端账号：" + (cloudSession.user.email || cloudSession.user.id);
+      cloudLoadButton.disabled = false;
+      cloudUploadButton.disabled = false;
+      cloudLogoutButton.disabled = false;
+      return;
+    }
+
+    setCloudStatus("待登录", false);
+    cloudUser.textContent = "Supabase 项目已配置，请输入邮箱并发送登录链接。";
+    cloudLoadButton.disabled = true;
+    cloudUploadButton.disabled = true;
+    cloudLogoutButton.disabled = true;
+  }
+
+  function initCloudClient() {
+    if (!window.supabase || !SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+      updateCloudUi();
+      return;
+    }
+
+    cloudClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    cloudClient.auth.onAuthStateChange(function (_event, session) {
+      cloudSession = session;
+      updateCloudUi();
+    });
+  }
+
+  async function refreshCloudSession() {
+    if (!cloudClient) return;
+    var response = await cloudClient.auth.getSession();
+    if (response.error) {
+      showSaveFeedback("云端登录状态读取失败：" + response.error.message);
+      return;
+    }
+    cloudSession = response.data.session;
+    updateCloudUi();
+  }
+
+  async function sendCloudLoginLink() {
+    if (!cloudClient) {
+      showSaveFeedback("Supabase SDK 尚未加载，稍后刷新页面再试。");
+      return;
+    }
+
+    var email = cloudEmailInput.value.trim();
+    if (!email) {
+      showError("请先输入用于云端同步的邮箱。");
+      return;
+    }
+
+    clearError();
+    setCloudBusy(true);
+    try {
+      var response = await cloudClient.auth.signInWithOtp({
+        email: email,
+        options: {
+          emailRedirectTo: window.location.origin + window.location.pathname
+        }
+      });
+
+      if (response.error) throw response.error;
+      showSaveFeedback("登录链接已发送到 " + email + "。打开邮件链接后回到本页即可同步。");
+    } catch (error) {
+      showError("发送登录链接失败：" + error.message);
+    } finally {
+      setCloudBusy(false);
+      updateCloudUi();
+    }
+  }
+
+  async function signOutCloud() {
+    if (!cloudClient) return;
+    setCloudBusy(true);
+    try {
+      var response = await cloudClient.auth.signOut();
+      if (response.error) throw response.error;
+      cloudSession = null;
+      showSaveFeedback("已退出云端账号，本地记录仍保留。");
+    } catch (error) {
+      showError("退出云端失败：" + error.message);
+    } finally {
+      setCloudBusy(false);
+      updateCloudUi();
+    }
+  }
+
+  function ensureCloudSignedIn() {
+    if (!cloudClient || !cloudSession || !cloudSession.user) {
+      showError("请先通过邮箱登录 Supabase 云端同步。");
+      return false;
+    }
+    return true;
+  }
+
+  async function upsertCloudRecords(records) {
+    if (!ensureCloudSignedIn()) return false;
+
+    var rows = records
+      .filter(function (record) {
+        return record.recordDate;
+      })
+      .map(recordToCloudRow);
+
+    if (!rows.length) {
+      showError("没有可上传的记录。");
+      return false;
+    }
+
+    var response = await cloudClient
+      .from(CLOUD_TABLE)
+      .upsert(rows, { onConflict: "user_id,record_date" });
+
+    if (response.error) throw response.error;
+    return true;
+  }
+
+  async function uploadLocalRecordsToCloud() {
+    clearError();
+    var records = loadSavedRecords();
+    if (!records.length) {
+      showError("本地还没有记录，请先保存至少一条。");
+      return;
+    }
+
+    setCloudBusy(true);
+    try {
+      await upsertCloudRecords(records);
+      showSaveFeedback("已上传 " + records.length + " 条本地记录到 Supabase。");
+    } catch (error) {
+      showError("上传云端失败：" + error.message);
+    } finally {
+      setCloudBusy(false);
+      updateCloudUi();
+    }
+  }
+
+  async function loadCloudRecords() {
+    if (!ensureCloudSignedIn()) return;
+
+    clearError();
+    setCloudBusy(true);
+    try {
+      var response = await cloudClient
+        .from(CLOUD_TABLE)
+        .select("*")
+        .order("record_date", { ascending: false });
+
+      if (response.error) throw response.error;
+
+      var incoming = (response.data || []).map(cloudRowToRecord);
+      var merged = mergeRecords(loadSavedRecords(), incoming);
+      persistSavedRecords(merged);
+      renderSavedRecords();
+      showSaveFeedback("已从 Supabase 载入 " + incoming.length + " 条记录，并与本地记录合并。");
+    } catch (error) {
+      showError("载入云端记录失败：" + error.message);
+    } finally {
+      setCloudBusy(false);
+      updateCloudUi();
+    }
+  }
+
+  async function deleteCloudRecord(recordDate) {
+    if (!cloudClient || !cloudSession || !cloudSession.user || !recordDate) return;
+
+    var response = await cloudClient
+      .from(CLOUD_TABLE)
+      .delete()
+      .eq("record_date", recordDate);
+
+    if (response.error) {
+      showSaveFeedback("本地已删除，但云端删除失败：" + response.error.message);
+    }
+  }
+
   function formatDateLabel(dateText) {
     if (!dateText) return "未命名日期";
     return dateText;
@@ -118,6 +328,64 @@
       note: note,
       savedAt: safeRecord.savedAt || ""
     };
+  }
+
+  function mergeRecords(localRecords, incomingRecords) {
+    var byDate = {};
+    localRecords.concat(incomingRecords).forEach(function (record) {
+      var normalized = normalizeRecord(record);
+      if (normalized.recordDate) {
+        byDate[normalized.recordDate] = normalized;
+      }
+    });
+
+    return Object.keys(byDate)
+      .sort()
+      .map(function (recordDate) {
+        return byDate[recordDate];
+      });
+  }
+
+  function cloudRowToRecord(row) {
+    return normalizeRecord({
+      recordDate: row.record_date,
+      spxPrevClose: row.spx_prev_close,
+      prevVixClose: row.prev_vix_close,
+      spxOpen: row.spx_open,
+      tradeSide: row.trade_side,
+      directionSource: row.direction_source,
+      finalOtmPct: row.final_otm_pct,
+      exactTargetPrice: row.exact_target_price,
+      outerFivePointStrike: row.outer_five_point_strike,
+      innerFivePointStrike: row.inner_five_point_strike,
+      note: row.note,
+      savedAt: row.saved_at
+    });
+  }
+
+  function recordToCloudRow(record) {
+    var normalized = normalizeRecord(record);
+    var row = {
+      record_date: normalized.recordDate,
+      spx_prev_close: normalized.spxPrevClose,
+      prev_vix_close: normalized.prevVixClose,
+      spx_open: normalized.spxOpen,
+      trade_side: normalized.tradeSide,
+      direction_source: normalized.directionSource,
+      final_otm_pct: normalized.finalOtmPct,
+      exact_target_price: normalized.exactTargetPrice,
+      outer_five_point_strike: normalized.outerFivePointStrike,
+      inner_five_point_strike: normalized.innerFivePointStrike,
+      note: normalized.note,
+      saved_at: normalized.savedAt || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    if (cloudSession && cloudSession.user && cloudSession.user.id) {
+      row.user_id = cloudSession.user.id;
+    }
+
+    return row;
   }
 
   function formatNumber(value, digits) {
@@ -288,6 +556,7 @@
       persistSavedRecords(records);
       renderSavedRecords();
       showSaveFeedback("已删除 " + formatDateLabel(record.recordDate) + " 的记录。");
+      deleteCloudRecord(record.recordDate);
     });
 
     actionRow.appendChild(loadButton);
@@ -409,7 +678,7 @@
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;");
+      .replace(/"/g, "&quot;");
   }
 
   function exportAsExcel() {
@@ -504,7 +773,7 @@
       return record.recordDate !== recordDateInput.value;
     });
 
-    records.push({
+    var newRecord = {
       recordDate: recordDateInput.value,
       spxPrevClose: Number(spxPrevCloseInput.value),
       prevVixClose: Number(vixPrevCloseInput.value),
@@ -517,7 +786,9 @@
       innerFivePointStrike: lastCalculatedResult.innerFivePointStrike,
       note: recordNoteInput.value.trim(),
       savedAt: new Date().toISOString()
-    });
+    };
+
+    records.push(newRecord);
 
     records.sort(function (left, right) {
       return left.recordDate.localeCompare(right.recordDate);
@@ -526,6 +797,16 @@
     persistSavedRecords(records);
     renderSavedRecords();
     showSaveFeedback("已保存 " + formatDateLabel(recordDateInput.value) + " 的记录。");
+
+    if (cloudClient && cloudSession && cloudSession.user) {
+      upsertCloudRecords([newRecord])
+        .then(function () {
+          showSaveFeedback("已保存 " + formatDateLabel(recordDateInput.value) + "，并同步到 Supabase。");
+        })
+        .catch(function (error) {
+          showSaveFeedback("本地已保存，但云端同步失败：" + error.message);
+        });
+    }
   }
 
   function loadExample() {
@@ -550,6 +831,10 @@
   saveRecordButton.addEventListener("click", saveCurrentRecord);
   exportCsvButton.addEventListener("click", exportAsCsv);
   exportExcelButton.addEventListener("click", exportAsExcel);
+  cloudLoginButton.addEventListener("click", sendCloudLoginLink);
+  cloudLoadButton.addEventListener("click", loadCloudRecords);
+  cloudUploadButton.addEventListener("click", uploadLocalRecordsToCloud);
+  cloudLogoutButton.addEventListener("click", signOutCloud);
   document.getElementById("load-example").addEventListener("click", loadExample);
   document.getElementById("load-low-vix-example").addEventListener("click", loadLowVixExample);
 
@@ -562,6 +847,8 @@
   });
 
   recordDateInput.value = todayString();
+  initCloudClient();
+  refreshCloudSession();
   renderSavedRecords();
   loadExample();
 })();

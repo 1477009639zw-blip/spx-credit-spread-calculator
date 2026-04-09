@@ -344,6 +344,69 @@ button:hover {
   margin-top: 14px;
 }
 
+.cloud-panel {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(216, 239, 232, 0.74), rgba(255, 255, 255, 0.72)),
+    rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(13, 106, 91, 0.14);
+}
+
+.cloud-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.cloud-head h4 {
+  margin: 0 0 6px;
+  font-size: 1.02rem;
+  color: var(--accent-strong);
+}
+
+.cloud-head p,
+.cloud-user {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.cloud-status-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #8a3e18;
+  background: var(--copper-soft);
+  border: 1px solid rgba(138, 62, 24, 0.14);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.cloud-status-badge.connected {
+  color: #0a5a4d;
+  background: var(--accent-soft);
+  border-color: rgba(13, 106, 91, 0.14);
+}
+
+.cloud-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.cloud-user {
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
 .memory-tip {
   margin-top: 12px;
   font-size: 0.92rem;
@@ -691,6 +754,14 @@ button:hover {
   }
 
   .export-row {
+    flex-direction: column;
+  }
+
+  .cloud-head {
+    flex-direction: column;
+  }
+
+  .cloud-actions {
     flex-direction: column;
   }
 
