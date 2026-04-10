@@ -310,11 +310,44 @@
     return dateText;
   }
 
+  function numericOrFallback(value, fallback) {
+    var parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function buildRecommendation(result) {
+    if (!result) return "";
+    return result.tradeSide + " credit spread | 点位 " + formatNumber(result.exactTargetPrice, 2) + " | Final OTM " + formatPercent(result.finalOtmPct, 2);
+  }
+
+  function referenceValueByPct(result, pct, direction) {
+    if (!result || !Array.isArray(result.referenceLevels)) return null;
+    var found = result.referenceLevels.find(function (level) {
+      return level.pct === pct;
+    });
+    if (!found) return null;
+    return direction === "down" ? found.downLevel : found.upLevel;
+  }
+
   function normalizeRecord(record) {
     var safeRecord = record || {};
     var note = typeof safeRecord.note === "string" ? safeRecord.note : "";
     var outerFivePointStrike = Number.isFinite(Number(safeRecord.outerFivePointStrike)) ? Number(safeRecord.outerFivePointStrike) : null;
     var innerFivePointStrike = Number.isFinite(Number(safeRecord.innerFivePointStrike)) ? Number(safeRecord.innerFivePointStrike) : null;
+    var fallbackResult = null;
+
+    if (Number(safeRecord.spxPrevClose) > 0 && Number(safeRecord.prevVixClose) > 0 && Number(safeRecord.spxOpen) > 0) {
+      try {
+        fallbackResult = core.calculateStrategy({
+          spxPrevClose: Number(safeRecord.spxPrevClose),
+          prevVixClose: Number(safeRecord.prevVixClose),
+          spxOpen: Number(safeRecord.spxOpen)
+        });
+      } catch (_error) {
+        fallbackResult = null;
+      }
+    }
+
     return {
       recordDate: safeRecord.recordDate || "",
       spxPrevClose: Number(safeRecord.spxPrevClose || 0),
@@ -326,6 +359,17 @@
       exactTargetPrice: Number(safeRecord.exactTargetPrice || 0),
       outerFivePointStrike: outerFivePointStrike,
       innerFivePointStrike: innerFivePointStrike,
+      recommendation: typeof safeRecord.recommendation === "string" && safeRecord.recommendation
+        ? safeRecord.recommendation
+        : buildRecommendation(fallbackResult),
+      down1_5Level: numericOrFallback(safeRecord.down1_5Level, referenceValueByPct(fallbackResult, 0.015, "down")),
+      up1_5Level: numericOrFallback(safeRecord.up1_5Level, referenceValueByPct(fallbackResult, 0.015, "up")),
+      down2_0Level: numericOrFallback(safeRecord.down2_0Level, referenceValueByPct(fallbackResult, 0.02, "down")),
+      up2_0Level: numericOrFallback(safeRecord.up2_0Level, referenceValueByPct(fallbackResult, 0.02, "up")),
+      down2_5Level: numericOrFallback(safeRecord.down2_5Level, referenceValueByPct(fallbackResult, 0.025, "down")),
+      up2_5Level: numericOrFallback(safeRecord.up2_5Level, referenceValueByPct(fallbackResult, 0.025, "up")),
+      down3_0Level: numericOrFallback(safeRecord.down3_0Level, referenceValueByPct(fallbackResult, 0.03, "down")),
+      up3_0Level: numericOrFallback(safeRecord.up3_0Level, referenceValueByPct(fallbackResult, 0.03, "up")),
       note: note,
       savedAt: safeRecord.savedAt || ""
     };
@@ -359,6 +403,15 @@
       exactTargetPrice: row.exact_target_price,
       outerFivePointStrike: row.outer_five_point_strike,
       innerFivePointStrike: row.inner_five_point_strike,
+      recommendation: row.recommended_strategy,
+      down1_5Level: row.reference_down_1_5,
+      up1_5Level: row.reference_up_1_5,
+      down2_0Level: row.reference_down_2_0,
+      up2_0Level: row.reference_up_2_0,
+      down2_5Level: row.reference_down_2_5,
+      up2_5Level: row.reference_up_2_5,
+      down3_0Level: row.reference_down_3_0,
+      up3_0Level: row.reference_up_3_0,
       note: row.note,
       savedAt: row.saved_at
     });
@@ -377,6 +430,15 @@
       exact_target_price: normalized.exactTargetPrice,
       outer_five_point_strike: normalized.outerFivePointStrike,
       inner_five_point_strike: normalized.innerFivePointStrike,
+      recommended_strategy: normalized.recommendation,
+      reference_down_1_5: normalized.down1_5Level,
+      reference_up_1_5: normalized.up1_5Level,
+      reference_down_2_0: normalized.down2_0Level,
+      reference_up_2_0: normalized.up2_0Level,
+      reference_down_2_5: normalized.down2_5Level,
+      reference_up_2_5: normalized.up2_5Level,
+      reference_down_3_0: normalized.down3_0Level,
+      reference_up_3_0: normalized.up3_0Level,
       note: normalized.note,
       saved_at: normalized.savedAt || new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -521,6 +583,13 @@
     otm.textContent = "OTM " + formatPercent(record.finalOtmPct, 2);
     stats.appendChild(otm);
 
+    if (record.recommendation) {
+      var recommendation = document.createElement("p");
+      recommendation.className = "saved-record-note";
+      recommendation.textContent = "推荐策略：" + record.recommendation;
+      card.appendChild(recommendation);
+    }
+
     if (record.note) {
       var note = document.createElement("p");
       note.className = "saved-record-note";
@@ -604,24 +673,25 @@
           "SPX昨收": record.spxPrevClose,
           "VIX1D昨收": record.prevVixClose,
           "SPX开盘": record.spxOpen,
-          "Gap%": Number((calculated.gapPct * 100).toFixed(4)),
+          "Gap%": Number(((record.spxOpen / record.spxPrevClose - 1) * 100).toFixed(4)),
           "Gap分档": calculated.gapBucket,
-          "方向": calculated.tradeSide,
-          "方向来源": calculated.directionSource,
+          "方向": record.tradeSide,
+          "方向来源": record.directionSource,
           "a值": calculated.aMultiplier,
           "RawOTM%": Number((calculated.rawOtmPct * 100).toFixed(4)),
-          "FinalOTM%": Number((calculated.finalOtmPct * 100).toFixed(4)),
-          "精确公式点位": Number(calculated.exactTargetPrice.toFixed(4)),
-          "向外保守5点": calculated.outerFivePointStrike,
-          "向内5点": calculated.innerFivePointStrike,
-          "下跌1.5%": Number(calculated.referenceLevels[0].downLevel.toFixed(4)),
-          "上涨1.5%": Number(calculated.referenceLevels[0].upLevel.toFixed(4)),
-          "下跌2.0%": Number(calculated.referenceLevels[1].downLevel.toFixed(4)),
-          "上涨2.0%": Number(calculated.referenceLevels[1].upLevel.toFixed(4)),
-          "下跌2.5%": Number(calculated.referenceLevels[2].downLevel.toFixed(4)),
-          "上涨2.5%": Number(calculated.referenceLevels[2].upLevel.toFixed(4)),
-          "下跌3.0%": Number(calculated.referenceLevels[3].downLevel.toFixed(4)),
-          "上涨3.0%": Number(calculated.referenceLevels[3].upLevel.toFixed(4)),
+          "推荐策略": record.recommendation || "",
+          "FinalOTM%": Number((record.finalOtmPct * 100).toFixed(4)),
+          "精确公式点位": Number(record.exactTargetPrice.toFixed(4)),
+          "向外保守5点": record.outerFivePointStrike,
+          "向内5点": record.innerFivePointStrike,
+          "下跌1.5%": Number(numericOrFallback(record.down1_5Level, 0).toFixed(4)),
+          "上涨1.5%": Number(numericOrFallback(record.up1_5Level, 0).toFixed(4)),
+          "下跌2.0%": Number(numericOrFallback(record.down2_0Level, 0).toFixed(4)),
+          "上涨2.0%": Number(numericOrFallback(record.up2_0Level, 0).toFixed(4)),
+          "下跌2.5%": Number(numericOrFallback(record.down2_5Level, 0).toFixed(4)),
+          "上涨2.5%": Number(numericOrFallback(record.up2_5Level, 0).toFixed(4)),
+          "下跌3.0%": Number(numericOrFallback(record.down3_0Level, 0).toFixed(4)),
+          "上涨3.0%": Number(numericOrFallback(record.up3_0Level, 0).toFixed(4)),
           "备注": record.note || "",
           "保存时间": record.savedAt || ""
         };
@@ -785,6 +855,15 @@
       exactTargetPrice: lastCalculatedResult.exactTargetPrice,
       outerFivePointStrike: lastCalculatedResult.outerFivePointStrike,
       innerFivePointStrike: lastCalculatedResult.innerFivePointStrike,
+      recommendation: buildRecommendation(lastCalculatedResult),
+      down1_5Level: lastCalculatedResult.referenceLevels[0].downLevel,
+      up1_5Level: lastCalculatedResult.referenceLevels[0].upLevel,
+      down2_0Level: lastCalculatedResult.referenceLevels[1].downLevel,
+      up2_0Level: lastCalculatedResult.referenceLevels[1].upLevel,
+      down2_5Level: lastCalculatedResult.referenceLevels[2].downLevel,
+      up2_5Level: lastCalculatedResult.referenceLevels[2].upLevel,
+      down3_0Level: lastCalculatedResult.referenceLevels[3].downLevel,
+      up3_0Level: lastCalculatedResult.referenceLevels[3].upLevel,
       note: recordNoteInput.value.trim(),
       savedAt: new Date().toISOString()
     };

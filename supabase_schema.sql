@@ -15,12 +15,31 @@ create table if not exists public.spx_credit_spread_records (
   exact_target_price numeric,
   outer_five_point_strike numeric,
   inner_five_point_strike numeric,
+  recommended_strategy text,
+  reference_down_1_5 numeric,
+  reference_up_1_5 numeric,
+  reference_down_2_0 numeric,
+  reference_up_2_0 numeric,
+  reference_down_2_5 numeric,
+  reference_up_2_5 numeric,
+  reference_down_3_0 numeric,
+  reference_up_3_0 numeric,
   note text,
   saved_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, record_date)
 );
+
+alter table public.spx_credit_spread_records add column if not exists recommended_strategy text;
+alter table public.spx_credit_spread_records add column if not exists reference_down_1_5 numeric;
+alter table public.spx_credit_spread_records add column if not exists reference_up_1_5 numeric;
+alter table public.spx_credit_spread_records add column if not exists reference_down_2_0 numeric;
+alter table public.spx_credit_spread_records add column if not exists reference_up_2_0 numeric;
+alter table public.spx_credit_spread_records add column if not exists reference_down_2_5 numeric;
+alter table public.spx_credit_spread_records add column if not exists reference_up_2_5 numeric;
+alter table public.spx_credit_spread_records add column if not exists reference_down_3_0 numeric;
+alter table public.spx_credit_spread_records add column if not exists reference_up_3_0 numeric;
 
 alter table public.spx_credit_spread_records enable row level security;
 
@@ -53,4 +72,3 @@ create policy "Users can delete own SPX calculator records"
   for delete
   to authenticated
   using (auth.uid() = user_id);
-
