@@ -16,6 +16,10 @@
   var saveRecordButton = document.getElementById("save-record");
   var exportCsvButton = document.getElementById("export-csv");
   var exportExcelButton = document.getElementById("export-excel");
+  var localChooseFolderButton = document.getElementById("local-choose-folder");
+  var localLoadButton = document.getElementById("local-load");
+  var localStatusBadge = document.getElementById("local-status-badge");
+  var localFolderLabel = document.getElementById("local-folder-label");
   var cloudEmailInput = document.getElementById("cloud-email");
   var cloudLoginButton = document.getElementById("cloud-login");
   var cloudLoadButton = document.getElementById("cloud-load");
@@ -26,11 +30,17 @@
   var saveFeedback = document.getElementById("save-feedback");
   var savedRecordsList = document.getElementById("saved-records-list");
   var savedRecordsEmpty = document.getElementById("saved-records-empty");
-  var STORAGE_KEY = "spx-credit-spread-calculator-records-v1";
+  var LOCAL_RECORDS_FILENAME = "spx_credit_spread_records.json";
+  var LEGACY_STORAGE_KEY = "spx-credit-spread-calculator-records-v1";
+  var LOCAL_DB_NAME = "spx-credit-spread-calculator-local-store-v1";
+  var LOCAL_DB_STORE = "metadata";
+  var LOCAL_FOLDER_HANDLE_KEY = "records-folder-handle";
   var SUPABASE_URL = "https://frnrhycstwiezcifktnh.supabase.co";
   var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_-xXAZ7HC7MSNZcYSRap5mw_hIR_N4fN";
   var PUBLIC_APP_URL = "https://1477009639zw-blip.github.io/spx-credit-spread-calculator/";
   var CLOUD_TABLE = "spx_credit_spread_records";
+  var savedRecordsCache = [];
+  var localFolderHandle = null;
   var cloudClient = null;
   var cloudSession = null;
   var lastCalculatedResult = null;
@@ -79,8 +89,14 @@
   }
 
   function loadSavedRecords() {
+    return savedRecordsCache.map(function (record) {
+      return normalizeRecord(record);
+    });
+  }
+
+  function loadLegacyBrowserRecords() {
     try {
-      var raw = window.localStorage.getItem(STORAGE_KEY);
+      var raw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
       if (!raw) return [];
       var parsed = JSON.parse(raw);
       return Array.isArray(parsed)
@@ -93,8 +109,112 @@
     }
   }
 
+  function clearLegacyBrowserRecords() {
+    try {
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    } catch (error) {
+      return false;
+    }
+    return true;
+  }
+
   function persistSavedRecords(records) {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    var nextRecords = Array.isArray(records)
+      ? records.map(function (record) {
+          return normalizeRecord(record);
+        })
+      : [];
+
+    if (!localFolderHandle) {
+      savedRecordsCache = nextRecords;
+      return Promise.resolve(false);
+    }
+
+    return writeLocalRecordsFile(nextRecords).then(function () {
+      savedRecordsCache = nextRecords;
+      return true;
+    });
+  }
+
+  function openLocalMetaDb() {
+    if (!window.indexedDB) {
+      return Promise.resolve(null);
+    }
+
+    return new Promise(function (resolve, reject) {
+      var request = window.indexedDB.open(LOCAL_DB_NAME, 1);
+
+      request.onupgradeneeded = function (event) {
+        event.target.result.createObjectStore(LOCAL_DB_STORE);
+      };
+
+      request.onsuccess = function () {
+        resolve(request.result);
+      };
+
+      request.onerror = function () {
+        reject(request.error || new Error("无法打开本地存储数据库。"));
+      };
+    });
+  }
+
+  async function readLocalMetaValue(key) {
+    var db = await openLocalMetaDb();
+    if (!db) return null;
+
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(LOCAL_DB_STORE, "readonly");
+      var store = tx.objectStore(LOCAL_DB_STORE);
+      var request = store.get(key);
+
+      request.onsuccess = function () {
+        resolve(request.result || null);
+      };
+
+      request.onerror = function () {
+        reject(request.error || new Error("读取本地文件夹记录失败。"));
+      };
+    }).finally(function () {
+      db.close();
+    });
+  }
+
+  async function writeLocalMetaValue(key, value) {
+    var db = await openLocalMetaDb();
+    if (!db) return false;
+
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(LOCAL_DB_STORE, "readwrite");
+      var store = tx.objectStore(LOCAL_DB_STORE);
+      store.put(value, key);
+      tx.oncomplete = function () {
+        resolve(true);
+      };
+      tx.onerror = function () {
+        reject(tx.error || new Error("保存本地文件夹记录失败。"));
+      };
+    }).finally(function () {
+      db.close();
+    });
+  }
+
+  async function removeLocalMetaValue(key) {
+    var db = await openLocalMetaDb();
+    if (!db) return false;
+
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(LOCAL_DB_STORE, "readwrite");
+      var store = tx.objectStore(LOCAL_DB_STORE);
+      store.delete(key);
+      tx.oncomplete = function () {
+        resolve(true);
+      };
+      tx.onerror = function () {
+        reject(tx.error || new Error("清除本地文件夹记录失败。"));
+      };
+    }).finally(function () {
+      db.close();
+    });
   }
 
   function hideSaveFeedback() {
@@ -105,6 +225,175 @@
   function showSaveFeedback(message) {
     saveFeedback.textContent = message;
     saveFeedback.classList.remove("hidden");
+  }
+
+  function setLocalUiBusy(isBusy) {
+    [localChooseFolderButton, localLoadButton, saveRecordButton].forEach(function (button) {
+      button.disabled = isBusy;
+    });
+  }
+
+  function setLocalStatus(message, isConnected) {
+    localStatusBadge.textContent = message;
+    localStatusBadge.className = "local-status-badge" + (isConnected ? " connected" : "");
+  }
+
+  function updateLocalUi() {
+    if (localFolderHandle) {
+      setLocalStatus("已连接本地文件夹", true);
+      localFolderLabel.textContent = "记录文件：" + LOCAL_RECORDS_FILENAME + (localFolderHandle.name ? " | 文件夹：" + localFolderHandle.name : "");
+      localLoadButton.disabled = false;
+      saveRecordButton.disabled = false;
+      return;
+    }
+
+    setLocalStatus("未选择文件夹", false);
+    localFolderLabel.textContent = "请选择一个电脑文件夹，记录会写入其中的 JSON 文件。";
+    localLoadButton.disabled = true;
+    saveRecordButton.disabled = true;
+  }
+
+  async function verifyLocalFolderPermission(handle) {
+    if (!handle) return false;
+
+    var options = { mode: "readwrite" };
+    if (typeof handle.queryPermission === "function" && (await handle.queryPermission(options)) === "granted") {
+      return true;
+    }
+
+    if (typeof handle.requestPermission === "function" && (await handle.requestPermission(options)) === "granted") {
+      return true;
+    }
+
+    return false;
+  }
+
+  async function loadLocalRecordsFile() {
+    if (!localFolderHandle) return [];
+
+    var fileHandle = await localFolderHandle.getFileHandle(LOCAL_RECORDS_FILENAME, { create: true });
+    var file = await fileHandle.getFile();
+    var text = await file.text();
+    if (!text.trim()) return [];
+
+    var parsed = JSON.parse(text);
+    return Array.isArray(parsed)
+      ? parsed.map(function (record) {
+          return normalizeRecord(record);
+        })
+      : [];
+  }
+
+  async function writeLocalRecordsFile(records) {
+    if (!localFolderHandle) {
+      return false;
+    }
+
+    var allowed = await verifyLocalFolderPermission(localFolderHandle);
+    if (!allowed) {
+      throw new Error("没有写入本地文件夹的权限，请重新选择文件夹。");
+    }
+
+    var fileHandle = await localFolderHandle.getFileHandle(LOCAL_RECORDS_FILENAME, { create: true });
+    var writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(records, null, 2));
+    await writable.close();
+    return true;
+  }
+
+  async function restoreLocalFolderHandle() {
+    try {
+      var handle = await readLocalMetaValue(LOCAL_FOLDER_HANDLE_KEY);
+      if (!handle) {
+        updateLocalUi();
+        return false;
+      }
+
+      if (!(await verifyLocalFolderPermission(handle))) {
+        await removeLocalMetaValue(LOCAL_FOLDER_HANDLE_KEY);
+        updateLocalUi();
+        return false;
+      }
+
+      localFolderHandle = handle;
+      savedRecordsCache = await loadLocalRecordsFile();
+      await migrateLegacyRecordsToLocalFile();
+      renderSavedRecords();
+      updateLocalUi();
+      return true;
+    } catch (error) {
+      localFolderHandle = null;
+      updateLocalUi();
+      showError("恢复本地文件夹失败：" + error.message);
+      return false;
+    }
+  }
+
+  async function chooseLocalFolder() {
+    if (!window.showDirectoryPicker) {
+      showError("当前浏览器不支持本地文件夹直写，请使用 Chrome 或 Edge。");
+      return;
+    }
+
+    clearError();
+    setLocalUiBusy(true);
+    try {
+      var handle = await window.showDirectoryPicker({ mode: "readwrite" });
+      if (!(await verifyLocalFolderPermission(handle))) {
+        throw new Error("文件夹权限未授予。");
+      }
+
+      localFolderHandle = handle;
+      await writeLocalMetaValue(LOCAL_FOLDER_HANDLE_KEY, handle);
+      savedRecordsCache = await loadLocalRecordsFile();
+      await migrateLegacyRecordsToLocalFile();
+      renderSavedRecords();
+      updateLocalUi();
+      showSaveFeedback("已连接到本地文件夹 " + (handle.name || "未命名文件夹") + "。");
+    } catch (error) {
+      if (error && error.name !== "AbortError") {
+        showError("选择本地文件夹失败：" + error.message);
+      }
+    } finally {
+      setLocalUiBusy(false);
+      updateLocalUi();
+    }
+  }
+
+  async function reloadLocalRecordsFromFolder() {
+    if (!localFolderHandle) {
+      showError("请先选择本地文件夹。");
+      return;
+    }
+
+    clearError();
+    setLocalUiBusy(true);
+    try {
+      savedRecordsCache = await loadLocalRecordsFile();
+      renderSavedRecords();
+      showSaveFeedback("已从本地文件夹载入 " + savedRecordsCache.length + " 条记录。");
+    } catch (error) {
+      showError("读取本地文件失败：" + error.message);
+    } finally {
+      setLocalUiBusy(false);
+      updateLocalUi();
+    }
+  }
+
+  async function migrateLegacyRecordsToLocalFile() {
+    var legacyRecords = loadLegacyBrowserRecords();
+    if (!legacyRecords.length || !localFolderHandle) {
+      return false;
+    }
+
+    var currentFileRecords = await loadLocalRecordsFile();
+    var merged = mergeRecords(currentFileRecords, legacyRecords);
+    await writeLocalRecordsFile(merged);
+    savedRecordsCache = merged;
+    clearLegacyBrowserRecords();
+    renderSavedRecords();
+    showSaveFeedback("已将浏览器旧记录迁移到本地文件。");
+    return true;
   }
 
   function setCloudBusy(isBusy) {
@@ -281,7 +570,7 @@
 
       var incoming = (response.data || []).map(cloudRowToRecord);
       var merged = mergeRecords(loadSavedRecords(), incoming);
-      persistSavedRecords(merged);
+      await persistSavedRecords(merged);
       renderSavedRecords();
       showSaveFeedback("已从 Supabase 载入 " + incoming.length + " 条记录，并与本地记录合并。");
     } catch (error) {
@@ -619,14 +908,18 @@
     deleteButton.type = "button";
     deleteButton.className = "text-button";
     deleteButton.textContent = "删除";
-    deleteButton.addEventListener("click", function () {
+    deleteButton.addEventListener("click", async function () {
       var records = loadSavedRecords().filter(function (item) {
         return item.recordDate !== record.recordDate;
       });
-      persistSavedRecords(records);
-      renderSavedRecords();
-      showSaveFeedback("已删除 " + formatDateLabel(record.recordDate) + " 的记录。");
-      deleteCloudRecord(record.recordDate);
+      try {
+        await persistSavedRecords(records);
+        renderSavedRecords();
+        showSaveFeedback("已删除 " + formatDateLabel(record.recordDate) + " 的记录。");
+        await deleteCloudRecord(record.recordDate);
+      } catch (error) {
+        showError("删除记录失败：" + error.message);
+      }
     });
 
     actionRow.appendChild(loadButton);
@@ -828,7 +1121,7 @@
     }
   }
 
-  function saveCurrentRecord() {
+  async function saveCurrentRecord() {
     clearError();
 
     if (!recordDateInput.value) {
@@ -868,15 +1161,25 @@
       savedAt: new Date().toISOString()
     };
 
+    if (!localFolderHandle) {
+      showError("请先选择本地文件夹，再保存到电脑文件。");
+      return;
+    }
+
     records.push(newRecord);
 
     records.sort(function (left, right) {
       return left.recordDate.localeCompare(right.recordDate);
     });
 
-    persistSavedRecords(records);
-    renderSavedRecords();
-    showSaveFeedback("已保存 " + formatDateLabel(recordDateInput.value) + " 的记录。");
+    try {
+      await persistSavedRecords(records);
+      renderSavedRecords();
+      showSaveFeedback("已保存 " + formatDateLabel(recordDateInput.value) + " 到本地文件。");
+    } catch (error) {
+      showError("保存到本地文件失败：" + error.message);
+      return;
+    }
 
     if (cloudClient && cloudSession && cloudSession.user) {
       upsertCloudRecords([newRecord])
@@ -911,6 +1214,8 @@
   saveRecordButton.addEventListener("click", saveCurrentRecord);
   exportCsvButton.addEventListener("click", exportAsCsv);
   exportExcelButton.addEventListener("click", exportAsExcel);
+  localChooseFolderButton.addEventListener("click", chooseLocalFolder);
+  localLoadButton.addEventListener("click", reloadLocalRecordsFromFolder);
   cloudLoginButton.addEventListener("click", sendCloudLoginLink);
   cloudLoadButton.addEventListener("click", loadCloudRecords);
   cloudUploadButton.addEventListener("click", uploadLocalRecordsToCloud);
@@ -927,8 +1232,10 @@
   });
 
   recordDateInput.value = todayString();
+  updateLocalUi();
   initCloudClient();
   refreshCloudSession();
+  restoreLocalFolderHandle();
   renderSavedRecords();
   loadExample();
 })();

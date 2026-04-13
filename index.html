@@ -65,9 +65,10 @@
           <section class="memory-panel">
             <div class="memory-head">
               <div>
-                <h3>当日记录记忆</h3>
-                <p>把今天输入过的昨收、开盘和 VIX1D 保存在当前浏览器，之后点一下就能重新载入。</p>
+                <h3>本地文件保存</h3>
+                <p>记录会直接写入你选定的电脑文件夹中的 JSON 文件，不再保存到浏览器缓存。</p>
               </div>
+              <span class="local-status-badge" id="local-status-badge">未选择文件夹</span>
             </div>
 
             <div class="memory-controls">
@@ -75,7 +76,13 @@
                 <span>记录日期</span>
                 <input id="record-date" name="recordDate" type="date" />
               </label>
-              <button type="button" class="secondary-button save-record-button" id="save-record">保存当前为当日记录</button>
+              <button type="button" class="secondary-button" id="local-choose-folder">选择本地文件夹</button>
+              <button type="button" class="secondary-button save-record-button" id="save-record">保存当前到本地文件</button>
+            </div>
+
+            <div class="local-file-row">
+              <button type="button" class="ghost-button" id="local-load">从本地文件载入</button>
+              <p class="local-folder-label" id="local-folder-label">请选择一个电脑文件夹，记录会写入其中的 JSON 文件。</p>
             </div>
 
             <label class="field compact-field note-field">
@@ -112,10 +119,10 @@
               <p class="cloud-user" id="cloud-user">Supabase 项目已配置，等待登录。</p>
             </section>
 
-            <p class="memory-tip">同一日期再次保存会自动覆盖更新。本地记录仍会保存在当前浏览器；登录后才会额外同步到 Supabase。</p>
+            <p class="memory-tip">同一日期再次保存会自动覆盖更新。本地记录只写入你选定的文件夹；登录后才会额外同步到 Supabase。</p>
             <div class="info-banner hidden" id="save-feedback"></div>
 
-            <div class="saved-records-empty" id="saved-records-empty">还没有保存过记录。</div>
+            <div class="saved-records-empty" id="saved-records-empty">还没有从本地文件载入记录。</div>
             <div class="saved-records-list" id="saved-records-list"></div>
           </section>
 

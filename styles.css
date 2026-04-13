@@ -344,6 +344,40 @@ button:hover {
   margin-top: 14px;
 }
 
+.local-status-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #8a3e18;
+  background: var(--copper-soft);
+  border: 1px solid rgba(138, 62, 24, 0.14);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.local-status-badge.connected {
+  color: #0a5a4d;
+  background: var(--accent-soft);
+  border-color: rgba(13, 106, 91, 0.14);
+}
+
+.local-file-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.local-folder-label {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .cloud-panel {
   margin-top: 18px;
   padding: 16px;
@@ -755,6 +789,11 @@ button:hover {
 
   .export-row {
     flex-direction: column;
+  }
+
+  .local-file-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .cloud-head {
