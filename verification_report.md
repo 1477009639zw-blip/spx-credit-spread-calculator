@@ -51,6 +51,7 @@
   - 使用 publishable key 初始化前端客户端
   - 登录方式为邮箱 Magic Link
   - 登录后可上传本地记录、从云端载入记录、保存时自动同步、删除时同步删除
+  - 若线上表结构尚未执行最新迁移，云端写入会自动回退到核心字段并提示补迁移
   - 表结构与 RLS 策略见 `supabase_schema.sql`
 - 低 VIX override 规则：
   - `t-1 VIX1D < 15` 且 `gap down` 未超过 `-0.5%` 时，固定做 `CALL`

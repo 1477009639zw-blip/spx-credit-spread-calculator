@@ -513,6 +513,17 @@
     return true;
   }
 
+  function isMissingCloudColumnError(error) {
+    var code = error && error.code ? String(error.code) : "";
+    var message = error && error.message ? String(error.message) : "";
+    return (
+      code === "42703" ||
+      code === "PGRST204" ||
+      /does not exist/i.test(message) ||
+      /Could not find the '.*' column/i.test(message)
+    );
+  }
+
   async function upsertCloudRecords(records) {
     if (!ensureCloudSignedIn()) return false;
 
@@ -527,12 +538,35 @@
       return false;
     }
 
-    var response = await cloudClient
-      .from(CLOUD_TABLE)
-      .upsert(rows, { onConflict: "user_id,record_date" });
+    try {
+      var response = await cloudClient
+        .from(CLOUD_TABLE)
+        .upsert(rows, { onConflict: "user_id,record_date" });
 
-    if (response.error) throw response.error;
-    return true;
+      if (response.error) throw response.error;
+      return true;
+    } catch (error) {
+      if (!isMissingCloudColumnError(error)) {
+        throw error;
+      }
+
+      var legacyRows = records
+        .filter(function (record) {
+          return record.recordDate;
+        })
+        .map(recordToLegacyCloudRow);
+
+      var fallbackResponse = await cloudClient
+        .from(CLOUD_TABLE)
+        .upsert(legacyRows, { onConflict: "user_id,record_date" });
+
+      if (fallbackResponse.error) {
+        throw fallbackResponse.error;
+      }
+
+      showSaveFeedback("云端表结构还没升级，已先同步核心字段。请执行最新 supabase_schema.sql 以保存推荐策略和 OTM 参考位。");
+      return true;
+    }
   }
 
   async function uploadLocalRecordsToCloud() {
@@ -728,6 +762,31 @@
       reference_up_2_5: normalized.up2_5Level,
       reference_down_3_0: normalized.down3_0Level,
       reference_up_3_0: normalized.up3_0Level,
+      note: normalized.note,
+      saved_at: normalized.savedAt || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    if (cloudSession && cloudSession.user && cloudSession.user.id) {
+      row.user_id = cloudSession.user.id;
+    }
+
+    return row;
+  }
+
+  function recordToLegacyCloudRow(record) {
+    var normalized = normalizeRecord(record);
+    var row = {
+      record_date: normalized.recordDate,
+      spx_prev_close: normalized.spxPrevClose,
+      prev_vix_close: normalized.prevVixClose,
+      spx_open: normalized.spxOpen,
+      trade_side: normalized.tradeSide,
+      direction_source: normalized.directionSource,
+      final_otm_pct: normalized.finalOtmPct,
+      exact_target_price: normalized.exactTargetPrice,
+      outer_five_point_strike: normalized.outerFivePointStrike,
+      inner_five_point_strike: normalized.innerFivePointStrike,
       note: normalized.note,
       saved_at: normalized.savedAt || new Date().toISOString(),
       updated_at: new Date().toISOString()
