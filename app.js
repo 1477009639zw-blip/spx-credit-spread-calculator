@@ -817,6 +817,22 @@
     return sign + formatPercent(value, digits);
   }
 
+  function expectedMoveLowPrice(result) {
+    if (Number.isFinite(result.expectedMoveLowPrice)) {
+      return result.expectedMoveLowPrice;
+    }
+
+    return result.spxPrevClose * (1 - result.baseExpectedMovePct);
+  }
+
+  function expectedMoveHighPrice(result) {
+    if (Number.isFinite(result.expectedMoveHighPrice)) {
+      return result.expectedMoveHighPrice;
+    }
+
+    return result.spxPrevClose * (1 + result.baseExpectedMovePct);
+  }
+
   function aDescription(result) {
     return "|gap| = " + formatPercent(result.absGapPct, 3) + "，落在 " + result.gapBucket + " 档";
   }
@@ -871,8 +887,8 @@
 
     fields.exactTarget.textContent = formatNumber(result.exactTargetPrice, 2);
     fields.finalOtm.textContent = formatPercent(result.finalOtmPct, 2);
-    fields.expectMoveLow.textContent = formatNumber(result.expectedMoveLowPrice, 2);
-    fields.expectMoveHigh.textContent = formatNumber(result.expectedMoveHighPrice, 2);
+    fields.expectMoveLow.textContent = formatNumber(expectedMoveLowPrice(result), 2);
+    fields.expectMoveHigh.textContent = formatNumber(expectedMoveHighPrice(result), 2);
 
     fields.overrideBanner.textContent = overrideMessage(result);
     fields.exactPointCard.textContent = formatNumber(result.exactTargetPrice, 2);
