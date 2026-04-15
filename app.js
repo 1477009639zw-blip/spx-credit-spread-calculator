@@ -50,6 +50,8 @@
     directionSourceBadge: document.getElementById("direction-source-badge"),
     exactTarget: document.getElementById("exact-target"),
     finalOtm: document.getElementById("final-otm"),
+    expectMoveLow: document.getElementById("expect-move-low"),
+    expectMoveHigh: document.getElementById("expect-move-high"),
     overrideBanner: document.getElementById("override-banner"),
     exactPointCard: document.getElementById("exact-point-card"),
     outerStrikeCard: document.getElementById("outer-strike-card"),
@@ -869,6 +871,8 @@
 
     fields.exactTarget.textContent = formatNumber(result.exactTargetPrice, 2);
     fields.finalOtm.textContent = formatPercent(result.finalOtmPct, 2);
+    fields.expectMoveLow.textContent = formatNumber(result.expectedMoveLowPrice, 2);
+    fields.expectMoveHigh.textContent = formatNumber(result.expectedMoveHighPrice, 2);
 
     fields.overrideBanner.textContent = overrideMessage(result);
     fields.exactPointCard.textContent = formatNumber(result.exactTargetPrice, 2);

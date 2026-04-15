@@ -90,6 +90,8 @@
     var absGapPct = Math.abs(gapPct);
     var gapDirection = gapPct > 0 ? "Gap Up" : "Gap Down / Flat";
     var baseExpectedMovePct = prevVixClose / 100 / SQRT_252;
+    var expectedMoveLowPrice = spxPrevClose * (1 - baseExpectedMovePct);
+    var expectedMoveHighPrice = spxPrevClose * (1 + baseExpectedMovePct);
     var moveAfterKPct = baseExpectedMovePct * K_MULTIPLIER;
     var aMultiplier = chooseAMultiplier(absGapPct);
     var rawOtmPct = moveAfterKPct * aMultiplier;
@@ -111,6 +113,8 @@
       gapBucket: gapBucket(absGapPct),
       gapDirection: gapDirection,
       baseExpectedMovePct: baseExpectedMovePct,
+      expectedMoveLowPrice: expectedMoveLowPrice,
+      expectedMoveHighPrice: expectedMoveHighPrice,
       kMultiplier: K_MULTIPLIER,
       moveAfterKPct: moveAfterKPct,
       aMultiplier: aMultiplier,
