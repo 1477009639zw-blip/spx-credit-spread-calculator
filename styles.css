@@ -388,6 +388,14 @@ button:hover {
   border: 1px solid rgba(13, 106, 91, 0.14);
 }
 
+.sync-history-stack {
+  margin-top: 18px;
+}
+
+.sync-history-stack .cloud-panel {
+  margin-top: 0;
+}
+
 .cloud-head {
   display: flex;
   justify-content: space-between;
