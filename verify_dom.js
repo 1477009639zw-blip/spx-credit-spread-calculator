@@ -60,17 +60,35 @@ function createElement(id, tagName) {
   return element;
 }
 
-function createDocument() {
+function parseIndexIds() {
+  const html = fs.readFileSync(path.join(rootDir, "index.html"), "utf8");
+  const ids = new Set();
+  const idPattern = /id="([^"]+)"/g;
+  var match = null;
+
+  while ((match = idPattern.exec(html)) !== null) {
+    ids.add(match[1]);
+  }
+
+  return ids;
+}
+
+function assertRequiredIds(indexIds) {
+  const required = ["expect-move-low", "expect-move-high", "exact-target", "trade-side-badge"];
+  const missing = required.filter((id) => !indexIds.has(id));
+  assert.deepStrictEqual(missing, [], "index.html missing required ids: " + missing.join(", "));
+}
+
+function createDocument(indexIds) {
   const elements = new Map();
+  indexIds.forEach((id) => {
+    elements.set(id, createElement(id));
+  });
 
   return {
     body: createElement("body", "body"),
     getElementById(id) {
-      if (!elements.has(id)) {
-        elements.set(id, createElement(id));
-      }
-
-      return elements.get(id);
+      return elements.get(id) || null;
     },
     createElement(tagName) {
       return createElement("", tagName);
@@ -83,9 +101,8 @@ function runScript(filename, context) {
   vm.runInContext(source, context, { filename });
 }
 
-function main() {
-  const document = createDocument();
-  const context = vm.createContext({
+function createContext(document) {
+  return vm.createContext({
     console,
     document,
     setTimeout,
@@ -106,30 +123,63 @@ function main() {
     indexedDB: null,
     scrollTo() {}
   });
+}
 
+function getRenderedValues(document) {
+  return {
+    expectedMoveLow: document.getElementById("expect-move-low").textContent,
+    expectedMoveHigh: document.getElementById("expect-move-high").textContent,
+    exactTarget: document.getElementById("exact-target").textContent,
+    tradeSide: document.getElementById("trade-side-badge").textContent
+  };
+}
+
+function assertSampleValues(values, label) {
+  assert.strictEqual(values.expectedMoveLow, "5,905.51", label + ": expectedMoveLow mismatch");
+  assert.strictEqual(values.expectedMoveHigh, "6,094.49", label + ": expectedMoveHigh mismatch");
+  assert.strictEqual(values.exactTarget, "5,863.93", label + ": exactTarget mismatch");
+  assert.strictEqual(values.tradeSide, "PUT", label + ": tradeSide mismatch");
+}
+
+function runScenario(indexIds, options) {
+  const document = createDocument(indexIds);
+  const context = createContext(document);
   context.window = context;
 
   runScript("core.js", context);
+
+  if (options && options.simulateLegacyCoreResult) {
+    const originalCalculate = context.SPXStrategyCalculatorCore.calculateStrategy;
+    context.SPXStrategyCalculatorCore.calculateStrategy = function (inputs) {
+      const result = originalCalculate(inputs);
+      delete result.expectedMoveLowPrice;
+      delete result.expectedMoveHighPrice;
+      return result;
+    };
+  }
+
   runScript("app.js", context);
+  return getRenderedValues(document);
+}
 
-  const expectedMoveLow = document.getElementById("expect-move-low").textContent;
-  const expectedMoveHigh = document.getElementById("expect-move-high").textContent;
-  const exactTarget = document.getElementById("exact-target").textContent;
-  const tradeSide = document.getElementById("trade-side-badge").textContent;
+function main() {
+  const indexIds = parseIndexIds();
+  assertRequiredIds(indexIds);
 
-  assert.strictEqual(expectedMoveLow, "5,905.51");
-  assert.strictEqual(expectedMoveHigh, "6,094.49");
-  assert.strictEqual(exactTarget, "5,863.93");
-  assert.strictEqual(tradeSide, "PUT");
+  const normalValues = runScenario(indexIds, { simulateLegacyCoreResult: false });
+  assertSampleValues(normalValues, "normal-core");
+
+  const fallbackValues = runScenario(indexIds, { simulateLegacyCoreResult: true });
+  assertSampleValues(fallbackValues, "legacy-core-fallback");
 
   console.log(
     JSON.stringify(
       {
         status: "ok",
-        expectedMoveLow,
-        expectedMoveHigh,
-        exactTarget,
-        tradeSide
+        scenarios: {
+          normalCore: normalValues,
+          legacyCoreFallback: fallbackValues
+        }
       },
       null,
       2
