@@ -62,39 +62,45 @@
             </div>
           </form>
 
-          <section class="memory-panel">
-            <div class="memory-head">
-              <div>
-                <h3>本地文件保存</h3>
-                <p>记录会直接写入你选定的电脑文件夹中的 JSON 文件，不再保存到浏览器缓存。</p>
-              </div>
-              <span class="local-status-badge" id="local-status-badge">未选择文件夹</span>
+          <section class="result-reference-panel" aria-label="昨收固定价外参考点位">
+            <div class="section-head">
+              <h2>昨收固定价外参考点位</h2>
+              <p>基于 SPX 昨收，额外给出固定涨跌幅的参考价位，便于快速对照常用 OTM 距离。</p>
             </div>
 
-            <div class="memory-controls">
-              <label class="field compact-field">
-                <span>记录日期</span>
-                <input id="record-date" name="recordDate" type="date" />
-              </label>
-              <button type="button" class="secondary-button" id="local-choose-folder">选择本地文件夹</button>
-              <button type="button" class="secondary-button save-record-button" id="save-record">保存当前到本地文件</button>
+            <div class="reference-table-wrap">
+              <table class="reference-table">
+                <thead>
+                  <tr>
+                    <th>价外幅度</th>
+                    <th>下跌参考位</th>
+                    <th>上涨参考位</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1.5%</td>
+                    <td id="down-1_5-level">-</td>
+                    <td id="up-1_5-level">-</td>
+                  </tr>
+                  <tr>
+                    <td>2.0%</td>
+                    <td id="down-2_0-level">-</td>
+                    <td id="up-2_0-level">-</td>
+                  </tr>
+                  <tr>
+                    <td>2.5%</td>
+                    <td id="down-2_5-level">-</td>
+                    <td id="up-2_5-level">-</td>
+                  </tr>
+                  <tr>
+                    <td>3.0%</td>
+                    <td id="down-3_0-level">-</td>
+                    <td id="up-3_0-level">-</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-
-            <div class="local-file-row">
-              <button type="button" class="ghost-button" id="local-load">从本地文件载入</button>
-              <p class="local-folder-label" id="local-folder-label">请选择一个电脑文件夹，记录会写入其中的 JSON 文件。</p>
-            </div>
-
-            <label class="field compact-field note-field">
-              <span>备注</span>
-              <textarea id="record-note" name="recordNote" rows="3" placeholder="例如：CPI 日、盘前跳空大、主观上更偏向看震荡。"></textarea>
-            </label>
-
-            <div class="export-row">
-              <button type="button" class="ghost-button" id="export-csv">导出所有记录 CSV</button>
-              <button type="button" class="ghost-button" id="export-excel">导出所有记录 Excel</button>
-            </div>
-
           </section>
 
           <div class="input-hints">
@@ -167,45 +173,39 @@
 
           <div class="narrative-card" id="narrative-card"></div>
 
-          <section class="result-reference-panel" aria-label="昨收固定价外参考点位">
-            <div class="section-head">
-              <h2>昨收固定价外参考点位</h2>
-              <p>基于 SPX 昨收，额外给出固定涨跌幅的参考价位，便于快速对照常用 OTM 距离。</p>
+          <section class="memory-panel">
+            <div class="memory-head">
+              <div>
+                <h3>本地文件保存</h3>
+                <p>记录会直接写入你选定的电脑文件夹中的 JSON 文件，不再保存到浏览器缓存。</p>
+              </div>
+              <span class="local-status-badge" id="local-status-badge">未选择文件夹</span>
             </div>
 
-            <div class="reference-table-wrap">
-              <table class="reference-table">
-                <thead>
-                  <tr>
-                    <th>价外幅度</th>
-                    <th>下跌参考位</th>
-                    <th>上涨参考位</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>1.5%</td>
-                    <td id="down-1_5-level">-</td>
-                    <td id="up-1_5-level">-</td>
-                  </tr>
-                  <tr>
-                    <td>2.0%</td>
-                    <td id="down-2_0-level">-</td>
-                    <td id="up-2_0-level">-</td>
-                  </tr>
-                  <tr>
-                    <td>2.5%</td>
-                    <td id="down-2_5-level">-</td>
-                    <td id="up-2_5-level">-</td>
-                  </tr>
-                  <tr>
-                    <td>3.0%</td>
-                    <td id="down-3_0-level">-</td>
-                    <td id="up-3_0-level">-</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="memory-controls">
+              <label class="field compact-field">
+                <span>记录日期</span>
+                <input id="record-date" name="recordDate" type="date" />
+              </label>
+              <button type="button" class="secondary-button" id="local-choose-folder">选择本地文件夹</button>
+              <button type="button" class="secondary-button save-record-button" id="save-record">保存当前到本地文件</button>
             </div>
+
+            <div class="local-file-row">
+              <button type="button" class="ghost-button" id="local-load">从本地文件载入</button>
+              <p class="local-folder-label" id="local-folder-label">请选择一个电脑文件夹，记录会写入其中的 JSON 文件。</p>
+            </div>
+
+            <label class="field compact-field note-field">
+              <span>备注</span>
+              <textarea id="record-note" name="recordNote" rows="3" placeholder="例如：CPI 日、盘前跳空大、主观上更偏向看震荡。"></textarea>
+            </label>
+
+            <div class="export-row">
+              <button type="button" class="ghost-button" id="export-csv">导出所有记录 CSV</button>
+              <button type="button" class="ghost-button" id="export-excel">导出所有记录 Excel</button>
+            </div>
+
           </section>
         </section>
       </main>
