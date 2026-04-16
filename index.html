@@ -167,57 +167,45 @@
 
           <div class="narrative-card" id="narrative-card"></div>
 
-          <section class="sync-history-stack" aria-label="云端同步和历史记录">
-            <section class="cloud-panel" aria-label="Supabase 云端同步">
-              <div class="cloud-head">
-                <div>
-                  <h4>云端同步</h4>
-                  <p>用 Supabase Auth 登录后，可把记录同步到云端，换设备也能载入同一批记录。</p>
-                </div>
-                <span class="cloud-status-badge" id="cloud-status-badge">未连接</span>
-              </div>
+          <section class="result-reference-panel" aria-label="昨收固定价外参考点位">
+            <div class="section-head">
+              <h2>昨收固定价外参考点位</h2>
+              <p>基于 SPX 昨收，额外给出固定涨跌幅的参考价位，便于快速对照常用 OTM 距离。</p>
+            </div>
 
-              <label class="field compact-field">
-                <span>登录邮箱</span>
-                <input id="cloud-email" name="cloudEmail" type="email" inputmode="email" placeholder="输入你的邮箱，接收登录链接" />
-              </label>
-
-              <div class="cloud-actions">
-                <button type="button" class="secondary-button" id="cloud-login">发送登录链接</button>
-                <button type="button" class="ghost-button" id="cloud-load">从云端载入</button>
-                <button type="button" class="ghost-button" id="cloud-upload">上传本地记录</button>
-                <button type="button" class="text-button" id="cloud-logout">退出云端</button>
-              </div>
-
-              <p class="cloud-user" id="cloud-user">Supabase 项目已配置，等待登录。</p>
-            </section>
-
-            <p class="memory-tip">同一日期再次保存会自动覆盖更新。本地记录只写入你选定的文件夹；登录后才会额外同步到 Supabase。</p>
-            <div class="info-banner hidden" id="save-feedback"></div>
-
-            <section class="history-panel" aria-label="历史记录">
-              <details class="history-details" id="history-details">
-                <summary class="history-summary">
-                  <span>历史记录</span>
-                  <span class="history-summary-meta" id="history-summary-meta">0 条 · 已折叠</span>
-                </summary>
-
-                <div class="history-body">
-                  <div class="history-tools">
-                    <label class="field compact-field history-date-field">
-                      <span>按日期快捷查看</span>
-                      <input id="history-filter-date" name="historyFilterDate" type="date" />
-                    </label>
-                    <button type="button" class="ghost-button small-button" id="history-filter-apply">查看该日</button>
-                    <button type="button" class="text-button" id="history-filter-clear">显示全部</button>
-                  </div>
-
-                  <p class="history-filter-state" id="history-filter-state">当前显示：全部日期</p>
-                  <div class="saved-records-empty" id="saved-records-empty">还没有从本地文件载入记录。</div>
-                  <div class="saved-records-list" id="saved-records-list"></div>
-                </div>
-              </details>
-            </section>
+            <div class="reference-table-wrap">
+              <table class="reference-table">
+                <thead>
+                  <tr>
+                    <th>价外幅度</th>
+                    <th>下跌参考位</th>
+                    <th>上涨参考位</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1.5%</td>
+                    <td id="down-1_5-level">-</td>
+                    <td id="up-1_5-level">-</td>
+                  </tr>
+                  <tr>
+                    <td>2.0%</td>
+                    <td id="down-2_0-level">-</td>
+                    <td id="up-2_0-level">-</td>
+                  </tr>
+                  <tr>
+                    <td>2.5%</td>
+                    <td id="down-2_5-level">-</td>
+                    <td id="up-2_5-level">-</td>
+                  </tr>
+                  <tr>
+                    <td>3.0%</td>
+                    <td id="down-3_0-level">-</td>
+                    <td id="up-3_0-level">-</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </section>
         </section>
       </main>
@@ -264,43 +252,62 @@
 
       <section class="card reference-card">
         <div class="section-head">
-          <h2>昨收固定价外参考点位</h2>
-          <p>基于 SPX 昨收，额外给出固定涨跌幅的参考价位，便于快速对照常用 OTM 距离。</p>
+          <h2>云端同步与历史记录</h2>
+          <p>登录后可同步历史记录，并按日期快速筛选查看。</p>
         </div>
 
-        <div class="reference-table-wrap">
-          <table class="reference-table">
-            <thead>
-              <tr>
-                <th>价外幅度</th>
-                <th>下跌参考位</th>
-                <th>上涨参考位</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>1.5%</td>
-                <td id="down-1_5-level">-</td>
-                <td id="up-1_5-level">-</td>
-              </tr>
-              <tr>
-                <td>2.0%</td>
-                <td id="down-2_0-level">-</td>
-                <td id="up-2_0-level">-</td>
-              </tr>
-              <tr>
-                <td>2.5%</td>
-                <td id="down-2_5-level">-</td>
-                <td id="up-2_5-level">-</td>
-              </tr>
-              <tr>
-                <td>3.0%</td>
-                <td id="down-3_0-level">-</td>
-                <td id="up-3_0-level">-</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <section class="sync-history-stack" aria-label="云端同步和历史记录">
+          <section class="cloud-panel" aria-label="Supabase 云端同步">
+            <div class="cloud-head">
+              <div>
+                <h4>云端同步</h4>
+                <p>用 Supabase Auth 登录后，可把记录同步到云端，换设备也能载入同一批记录。</p>
+              </div>
+              <span class="cloud-status-badge" id="cloud-status-badge">未连接</span>
+            </div>
+
+            <label class="field compact-field">
+              <span>登录邮箱</span>
+              <input id="cloud-email" name="cloudEmail" type="email" inputmode="email" placeholder="输入你的邮箱，接收登录链接" />
+            </label>
+
+            <div class="cloud-actions">
+              <button type="button" class="secondary-button" id="cloud-login">发送登录链接</button>
+              <button type="button" class="ghost-button" id="cloud-load">从云端载入</button>
+              <button type="button" class="ghost-button" id="cloud-upload">上传本地记录</button>
+              <button type="button" class="text-button" id="cloud-logout">退出云端</button>
+            </div>
+
+            <p class="cloud-user" id="cloud-user">Supabase 项目已配置，等待登录。</p>
+          </section>
+
+          <p class="memory-tip">同一日期再次保存会自动覆盖更新。本地记录只写入你选定的文件夹；登录后才会额外同步到 Supabase。</p>
+          <div class="info-banner hidden" id="save-feedback"></div>
+
+          <section class="history-panel" aria-label="历史记录">
+            <details class="history-details" id="history-details">
+              <summary class="history-summary">
+                <span>历史记录</span>
+                <span class="history-summary-meta" id="history-summary-meta">0 条 · 已折叠</span>
+              </summary>
+
+              <div class="history-body">
+                <div class="history-tools">
+                  <label class="field compact-field history-date-field">
+                    <span>按日期快捷查看</span>
+                    <input id="history-filter-date" name="historyFilterDate" type="date" />
+                  </label>
+                  <button type="button" class="ghost-button small-button" id="history-filter-apply">查看该日</button>
+                  <button type="button" class="text-button" id="history-filter-clear">显示全部</button>
+                </div>
+
+                <p class="history-filter-state" id="history-filter-state">当前显示：全部日期</p>
+                <div class="saved-records-empty" id="saved-records-empty">还没有从本地文件载入记录。</div>
+                <div class="saved-records-list" id="saved-records-list"></div>
+              </div>
+            </details>
+          </section>
+        </section>
       </section>
 
       <section class="card explanation-card">
