@@ -122,8 +122,29 @@
             <p class="memory-tip">同一日期再次保存会自动覆盖更新。本地记录只写入你选定的文件夹；登录后才会额外同步到 Supabase。</p>
             <div class="info-banner hidden" id="save-feedback"></div>
 
-            <div class="saved-records-empty" id="saved-records-empty">还没有从本地文件载入记录。</div>
-            <div class="saved-records-list" id="saved-records-list"></div>
+            <section class="history-panel" aria-label="历史记录">
+              <details class="history-details" id="history-details">
+                <summary class="history-summary">
+                  <span>历史记录</span>
+                  <span class="history-summary-meta" id="history-summary-meta">0 条 · 已折叠</span>
+                </summary>
+
+                <div class="history-body">
+                  <div class="history-tools">
+                    <label class="field compact-field history-date-field">
+                      <span>按日期快捷查看</span>
+                      <input id="history-filter-date" name="historyFilterDate" type="date" />
+                    </label>
+                    <button type="button" class="ghost-button small-button" id="history-filter-apply">查看该日</button>
+                    <button type="button" class="text-button" id="history-filter-clear">显示全部</button>
+                  </div>
+
+                  <p class="history-filter-state" id="history-filter-state">当前显示：全部日期</p>
+                  <div class="saved-records-empty" id="saved-records-empty">还没有从本地文件载入记录。</div>
+                  <div class="saved-records-list" id="saved-records-list"></div>
+                </div>
+              </details>
+            </section>
           </section>
 
           <div class="input-hints">

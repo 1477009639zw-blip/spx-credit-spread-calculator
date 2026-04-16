@@ -468,6 +468,9 @@ button:hover {
   display: grid;
   gap: 12px;
   margin-top: 16px;
+  max-height: 340px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .saved-record-card {
@@ -524,6 +527,83 @@ button:hover {
   display: flex;
   gap: 10px;
   margin-top: 14px;
+}
+
+.history-panel {
+  margin-top: 16px;
+}
+
+.history-details {
+  border-radius: 18px;
+  border: 1px solid rgba(31, 42, 42, 0.12);
+  background: rgba(255, 255, 255, 0.64);
+  overflow: hidden;
+}
+
+.history-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(31, 42, 42, 0.08);
+}
+
+.history-summary::-webkit-details-marker {
+  display: none;
+}
+
+.history-summary::after {
+  content: "+";
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(31, 42, 42, 0.16);
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.history-details[open] .history-summary::after {
+  content: "−";
+}
+
+.history-summary-meta {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.history-body {
+  padding: 14px 16px 16px;
+}
+
+.history-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+
+.history-date-field {
+  min-width: 220px;
+  flex: 1 1 220px;
+}
+
+.history-filter-state {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.history-body .saved-records-empty {
+  margin-top: 12px;
 }
 
 .small-button {
@@ -810,5 +890,14 @@ button:hover {
 
   .saved-record-actions {
     flex-direction: column;
+  }
+
+  .history-tools {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .history-date-field {
+    min-width: 0;
   }
 }

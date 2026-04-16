@@ -30,6 +30,12 @@
   var saveFeedback = document.getElementById("save-feedback");
   var savedRecordsList = document.getElementById("saved-records-list");
   var savedRecordsEmpty = document.getElementById("saved-records-empty");
+  var historyDetails = document.getElementById("history-details");
+  var historySummaryMeta = document.getElementById("history-summary-meta");
+  var historyFilterDateInput = document.getElementById("history-filter-date");
+  var historyFilterApplyButton = document.getElementById("history-filter-apply");
+  var historyFilterClearButton = document.getElementById("history-filter-clear");
+  var historyFilterState = document.getElementById("history-filter-state");
   var LOCAL_RECORDS_FILENAME = "spx_credit_spread_records.json";
   var LEGACY_STORAGE_KEY = "spx-credit-spread-calculator-records-v1";
   var LOCAL_DB_NAME = "spx-credit-spread-calculator-local-store-v1";
@@ -44,6 +50,7 @@
   var cloudClient = null;
   var cloudSession = null;
   var lastCalculatedResult = null;
+  var historyActiveFilterDate = "";
 
   var fields = {
     tradeSideBadge: document.getElementById("trade-side-badge"),
@@ -94,6 +101,19 @@
     return savedRecordsCache.map(function (record) {
       return normalizeRecord(record);
     });
+  }
+
+  function applyHistoryFilter(recordDate, options) {
+    historyActiveFilterDate = recordDate || "";
+    if (historyFilterDateInput) {
+      historyFilterDateInput.value = historyActiveFilterDate;
+    }
+
+    if (options && options.expand && historyDetails) {
+      historyDetails.open = true;
+    }
+
+    return renderSavedRecords();
   }
 
   function loadLegacyBrowserRecords() {
@@ -1011,21 +1031,68 @@
   }
 
   function renderSavedRecords() {
-    var records = loadSavedRecords().sort(function (left, right) {
+    var allRecords = loadSavedRecords().sort(function (left, right) {
       return right.recordDate.localeCompare(left.recordDate);
     });
+    var visibleRecords = historyActiveFilterDate
+      ? allRecords.filter(function (record) {
+          return record.recordDate === historyActiveFilterDate;
+        })
+      : allRecords;
+    var expandState = historyDetails && historyDetails.open ? "已展开" : "已折叠";
 
     savedRecordsList.innerHTML = "";
 
-    if (!records.length) {
+    if (historyFilterState) {
+      if (historyActiveFilterDate) {
+        historyFilterState.textContent = "当前显示：" + formatDateLabel(historyActiveFilterDate) + "（" + visibleRecords.length + " 条）";
+      } else {
+        historyFilterState.textContent = "当前显示：全部日期（" + allRecords.length + " 条）";
+      }
+    }
+
+    if (historySummaryMeta) {
+      if (historyActiveFilterDate) {
+        historySummaryMeta.textContent =
+          allRecords.length +
+          " 条 · 已筛选 " +
+          formatDateLabel(historyActiveFilterDate) +
+          "（" +
+          visibleRecords.length +
+          " 条） · " +
+          expandState;
+      } else {
+        historySummaryMeta.textContent = allRecords.length + " 条 · " + expandState;
+      }
+    }
+
+    if (historyFilterClearButton) {
+      historyFilterClearButton.disabled = !historyActiveFilterDate;
+    }
+
+    if (allRecords.length && historyActiveFilterDate && !visibleRecords.length) {
+      savedRecordsEmpty.textContent = "该日期没有记录，请换一天或点击“显示全部”。";
+    } else {
+      savedRecordsEmpty.textContent = "还没有从本地文件载入记录。";
+    }
+
+    if (!visibleRecords.length) {
       savedRecordsEmpty.classList.remove("hidden");
-      return;
+      return {
+        allCount: allRecords.length,
+        visibleCount: visibleRecords.length
+      };
     }
 
     savedRecordsEmpty.classList.add("hidden");
-    records.forEach(function (record) {
+    visibleRecords.forEach(function (record) {
       savedRecordsList.appendChild(createRecordMarkup(record));
     });
+
+    return {
+      allCount: allRecords.length,
+      visibleCount: visibleRecords.length
+    };
   }
 
   function exportRows() {
@@ -1301,6 +1368,26 @@
   cloudLogoutButton.addEventListener("click", signOutCloud);
   document.getElementById("load-example").addEventListener("click", loadExample);
   document.getElementById("load-low-vix-example").addEventListener("click", loadLowVixExample);
+  historyFilterApplyButton.addEventListener("click", function () {
+    var selectedDate = historyFilterDateInput.value;
+    if (!selectedDate) {
+      showError("请先选择要查看的记录日期。");
+      return;
+    }
+
+    clearError();
+    var view = applyHistoryFilter(selectedDate, { expand: true });
+    if (!view.visibleCount) {
+      showSaveFeedback("已切换到 " + formatDateLabel(selectedDate) + "，但当天没有记录。");
+    }
+  });
+  historyFilterClearButton.addEventListener("click", function () {
+    clearError();
+    applyHistoryFilter("", { expand: true });
+  });
+  historyDetails.addEventListener("toggle", function () {
+    renderSavedRecords();
+  });
 
   [spxPrevCloseInput, vixPrevCloseInput, spxOpenInput].forEach(function (input) {
     input.addEventListener("input", function () {
