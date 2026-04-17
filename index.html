@@ -16,7 +16,6 @@
         <section class="card form-card">
           <div class="section-head">
             <h2>输入参数</h2>
-            <p>以昨收和今日开盘价为基础，自动判断 gap 方向并计算最终策略点位。</p>
           </div>
 
           <form id="calculator-form" novalidate>
@@ -88,10 +87,6 @@
               <strong>分档说明</strong>
               <p>边界默认按“落在上限仍归前一档”处理，例如 1.50% 归入 a = 2.0，2.00% 归入 a = 2.5。</p>
             </div>
-            <div>
-              <strong>平开处理</strong>
-              <p>若开盘价不高于昨收，默认归入非高开侧并按 PUT 方向处理；若高开则按 CALL 方向处理。</p>
-            </div>
           </div>
 
           <div class="error-banner hidden" id="error-banner"></div>
@@ -127,10 +122,6 @@
               <p class="label">Expect Move High</p>
               <p class="main-number compact" id="expect-move-high">-</p>
             </div>
-          </div>
-
-          <div class="override-banner" id="override-banner">
-            方向由 gap 规则决定：gap down 做 PUT，gap up 做 CALL。
           </div>
 
           <div class="strike-grid">
@@ -288,32 +279,6 @@
             </details>
           </section>
         </section>
-      </section>
-
-      <section class="card explanation-card">
-        <div class="section-head">
-          <h2>规则速览</h2>
-          <p>方便你快速核对今天的输入有没有触发特殊逻辑。</p>
-        </div>
-
-        <div class="rules-grid">
-          <article>
-            <h3>方向规则</h3>
-            <p>正常情况下，gap down 做 PUT credit spread，gap up 做 CALL credit spread。</p>
-          </article>
-          <article>
-            <h3>方向判定</h3>
-            <p>不再使用低 VIX 强制 CALL 规则，任何情况下都只按 gap 方向判定交易侧。</p>
-          </article>
-          <article>
-            <h3>OTM 底线</h3>
-            <p>实际 PUT 至少 2.0% OTM，实际 CALL 至少 1.5% OTM。若公式算出来更近，就自动抬到最低距离。</p>
-          </article>
-          <article>
-            <h3>取整口径</h3>
-            <p>页面主结果采用精确点位，同时额外给出向外保守和向内 5 点取整，避免口径混淆。</p>
-          </article>
-        </div>
       </section>
 
       <section class="card hero-bottom-card">

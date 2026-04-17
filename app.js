@@ -59,7 +59,6 @@
     finalOtm: document.getElementById("final-otm"),
     expectMoveLow: document.getElementById("expect-move-low"),
     expectMoveHigh: document.getElementById("expect-move-high"),
-    overrideBanner: document.getElementById("override-banner"),
     exactPointCard: document.getElementById("exact-point-card"),
     outerStrikeCard: document.getElementById("outer-strike-card"),
     innerStrikeCard: document.getElementById("inner-strike-card"),
@@ -857,10 +856,6 @@
     return "|gap| = " + formatPercent(result.absGapPct, 3) + "，落在 " + result.gapBucket + " 档";
   }
 
-  function overrideMessage(result) {
-    return "今日方向完全按 gap 决定：gap down 做 PUT，gap up 做 CALL。";
-  }
-
   function narrative(result) {
     var floorText = result.floorApplied
       ? "由于公式算出的 OTM 更近，最终被 " + formatPercent(result.otmFloorPct, 2) + " 的底线抬高。"
@@ -902,7 +897,6 @@
     fields.expectMoveLow.textContent = formatNumber(expectedMoveLowPrice(result), 2);
     fields.expectMoveHigh.textContent = formatNumber(expectedMoveHighPrice(result), 2);
 
-    fields.overrideBanner.textContent = overrideMessage(result);
     fields.exactPointCard.textContent = formatNumber(result.exactTargetPrice, 2);
     fields.outerStrikeCard.textContent = formatNumber(result.outerFivePointStrike, 0);
     fields.innerStrikeCard.textContent = formatNumber(result.innerFivePointStrike, 0);
