@@ -858,15 +858,7 @@
   }
 
   function overrideMessage(result) {
-    if (result.overrideApplied) {
-      return "已触发低 VIX override：t-1 VIX1D < 15，且未出现超过 -0.5% 的 gap down，因此今日固定做 CALL credit spread。";
-    }
-
-    if (result.gapdownExemption) {
-      return "低 VIX 豁免已触发：虽然 t-1 VIX1D < 15，但 gap down 已超过 -0.5%，因此回到正常规则，今日做 PUT credit spread。";
-    }
-
-    return "未触发低 VIX override，今日方向完全按 gap 决定：gap down 做 PUT，gap up 做 CALL。";
+    return "今日方向完全按 gap 决定：gap down 做 PUT，gap up 做 CALL。";
   }
 
   function narrative(result) {

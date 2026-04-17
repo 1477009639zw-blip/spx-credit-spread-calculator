@@ -32,25 +32,12 @@
     return ">2.0%";
   }
 
-  function determineTradeSide(gapPct, prevVixClose) {
-    var defaultSide = gapPct > 0 ? "CALL" : "PUT";
-    var lowVixOverrideEligible = prevVixClose < 15;
-    var gapdownExemption = lowVixOverrideEligible && gapPct <= -0.005;
-
-    if (lowVixOverrideEligible && !gapdownExemption) {
-      return {
-        tradeSide: "CALL",
-        directionSource: "VIX1D<15 Call Override",
-        overrideApplied: true,
-        gapdownExemption: false
-      };
-    }
-
+  function determineTradeSide(gapPct) {
     return {
-      tradeSide: defaultSide,
-      directionSource: gapdownExemption ? "Gap Rule (Low-VIX Gapdown Exemption)" : "Gap Rule",
+      tradeSide: gapPct > 0 ? "CALL" : "PUT",
+      directionSource: "Gap Rule",
       overrideApplied: false,
-      gapdownExemption: gapdownExemption
+      gapdownExemption: false
     };
   }
 
@@ -95,7 +82,7 @@
     var moveAfterKPct = baseExpectedMovePct * K_MULTIPLIER;
     var aMultiplier = chooseAMultiplier(absGapPct);
     var rawOtmPct = moveAfterKPct * aMultiplier;
-    var directionInfo = determineTradeSide(gapPct, prevVixClose);
+    var directionInfo = determineTradeSide(gapPct);
     var otmFloorPct = directionInfo.tradeSide === "PUT" ? PUT_MIN_OTM : CALL_MIN_OTM;
     var floorApplied = rawOtmPct < otmFloorPct;
     var finalOtmPct = floorApplied ? otmFloorPct : rawOtmPct;

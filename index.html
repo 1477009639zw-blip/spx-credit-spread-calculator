@@ -16,7 +16,7 @@
         <section class="card form-card">
           <div class="section-head">
             <h2>输入参数</h2>
-            <p>以昨收和今日开盘价为基础，自动判断 gap 方向与 override。</p>
+            <p>以昨收和今日开盘价为基础，自动判断 gap 方向并计算最终策略点位。</p>
           </div>
 
           <form id="calculator-form" novalidate>
@@ -38,7 +38,7 @@
             <div class="button-row">
               <button type="submit" class="primary-button">计算今日策略</button>
               <button type="button" class="secondary-button" id="load-example">加载示例</button>
-              <button type="button" class="ghost-button" id="load-low-vix-example">低 VIX Override 示例</button>
+              <button type="button" class="ghost-button" id="load-low-vix-example">Gap Down 示例</button>
             </div>
           </form>
 
@@ -90,7 +90,7 @@
             </div>
             <div>
               <strong>平开处理</strong>
-              <p>若开盘价不高于昨收，默认归入非高开侧；若同时 VIX1D &lt; 15 且未触发 -0.5% 豁免，则仍改为 CALL。</p>
+              <p>若开盘价不高于昨收，默认归入非高开侧并按 PUT 方向处理；若高开则按 CALL 方向处理。</p>
             </div>
           </div>
 
@@ -130,7 +130,7 @@
           </div>
 
           <div class="override-banner" id="override-banner">
-            低 VIX override / 豁免状态会显示在这里
+            方向由 gap 规则决定：gap down 做 PUT，gap up 做 CALL。
           </div>
 
           <div class="strike-grid">
@@ -302,8 +302,8 @@
             <p>正常情况下，gap down 做 PUT credit spread，gap up 做 CALL credit spread。</p>
           </article>
           <article>
-            <h3>低 VIX Override</h3>
-            <p>若 t-1 VIX1D &lt; 15，除非 gap down 超过 -0.5%，否则固定只做 CALL credit spread。</p>
+            <h3>方向判定</h3>
+            <p>不再使用低 VIX 强制 CALL 规则，任何情况下都只按 gap 方向判定交易侧。</p>
           </article>
           <article>
             <h3>OTM 底线</h3>
@@ -321,18 +321,18 @@
           <div class="hero-copy">
             <p class="eyebrow">SPX Intraday Credit Spread</p>
             <p class="hero-text">
-              输入 SPX 昨收、VIX1D 昨收和今日开盘价，自动计算 expected move、方向判断、override 规则、最终 OTM 和今日策略点位。
+              输入 SPX 昨收、VIX1D 昨收和今日开盘价，自动计算 expected move、方向判断、最终 OTM 和今日策略点位。
             </p>
             <div class="hero-badges">
               <span>k = 1.2</span>
-              <span>VIX1D &lt; 15 可触发 CALL override</span>
+              <span>方向按 gap 规则判定</span>
               <span>PUT 最低 OTM 2.0%</span>
               <span>CALL 最低 OTM 1.5%</span>
             </div>
           </div>
           <div class="hero-panel">
             <div class="panel-label">核心逻辑</div>
-            <p>先用 VIX1D 推导 expected move，再按 gap 分档决定 a，最后应用低波动 override 与 OTM 底线。</p>
+            <p>先用 VIX1D 推导 expected move，再按 gap 分档决定 a，最后应用 OTM 底线。</p>
             <div class="formula-pill">
               <span>expected move</span>
               <strong>(VIX1D / 100) / √252 × 1.2 × a</strong>

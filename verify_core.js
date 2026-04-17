@@ -23,21 +23,12 @@
     return 3.0;
   }
 
-  function refSide(gapPct, prevVixClose) {
-    if (prevVixClose < 15 && gapPct > -0.005) {
-      return {
-        tradeSide: "CALL",
-        directionSource: "VIX1D<15 Call Override",
-        overrideApplied: true,
-        gapdownExemption: false
-      };
-    }
-
+  function refSide(gapPct) {
     return {
       tradeSide: gapPct > 0 ? "CALL" : "PUT",
-      directionSource: prevVixClose < 15 && gapPct <= -0.005 ? "Gap Rule (Low-VIX Gapdown Exemption)" : "Gap Rule",
+      directionSource: "Gap Rule",
       overrideApplied: false,
-      gapdownExemption: prevVixClose < 15 && gapPct <= -0.005
+      gapdownExemption: false
     };
   }
 
@@ -53,7 +44,7 @@
     var moveAfterKPct = baseExpectedMovePct * 1.2;
     var aMultiplier = refA(absGapPct);
     var rawOtmPct = moveAfterKPct * aMultiplier;
-    var sideInfo = refSide(gapPct, prevVixClose);
+    var sideInfo = refSide(gapPct);
     var otmFloorPct = sideInfo.tradeSide === "PUT" ? 0.02 : 0.015;
     var finalOtmPct = rawOtmPct > otmFloorPct ? rawOtmPct : otmFloorPct;
     var exactTargetPrice = sideInfo.tradeSide === "PUT"
@@ -145,6 +136,8 @@
     if (actual.innerFivePointStrike !== expected.innerFivePointStrike) throw new Error(label + ": innerFivePointStrike mismatch");
     if (actual.tradeSide !== expected.tradeSide) throw new Error(label + ": tradeSide mismatch");
     if (actual.directionSource !== expected.directionSource) throw new Error(label + ": directionSource mismatch");
+    if (actual.overrideApplied !== expected.overrideApplied) throw new Error(label + ": overrideApplied mismatch");
+    if (actual.gapdownExemption !== expected.gapdownExemption) throw new Error(label + ": gapdownExemption mismatch");
     if (actual.referenceLevels.length !== expected.referenceLevels.length) throw new Error(label + ": referenceLevels length mismatch");
 
     for (var i = 0; i < actual.referenceLevels.length; i += 1) {
