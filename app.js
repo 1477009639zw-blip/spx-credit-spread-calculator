@@ -1352,8 +1352,15 @@
   cloudLoadButton.addEventListener("click", loadCloudRecords);
   cloudUploadButton.addEventListener("click", uploadLocalRecordsToCloud);
   cloudLogoutButton.addEventListener("click", signOutCloud);
-  document.getElementById("load-example").addEventListener("click", loadExample);
-  document.getElementById("load-low-vix-example").addEventListener("click", loadLowVixExample);
+  var loadExampleButton = document.getElementById("load-example");
+  if (loadExampleButton) {
+    loadExampleButton.addEventListener("click", loadExample);
+  }
+
+  var loadLowVixExampleButton = document.getElementById("load-low-vix-example");
+  if (loadLowVixExampleButton) {
+    loadLowVixExampleButton.addEventListener("click", loadLowVixExample);
+  }
   historyFilterApplyButton.addEventListener("click", function () {
     var selectedDate = historyFilterDateInput.value;
     if (!selectedDate) {

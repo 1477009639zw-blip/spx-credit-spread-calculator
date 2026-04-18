@@ -14,10 +14,6 @@
 
       <main class="layout-grid">
         <section class="card form-card">
-          <div class="section-head">
-            <h2>输入参数</h2>
-          </div>
-
           <form id="calculator-form" novalidate>
             <label class="field">
               <span>SPX 昨日收盘价</span>
@@ -36,15 +32,12 @@
 
             <div class="button-row">
               <button type="submit" class="primary-button">计算今日策略</button>
-              <button type="button" class="secondary-button" id="load-example">加载示例</button>
-              <button type="button" class="ghost-button" id="load-low-vix-example">Gap Down 示例</button>
             </div>
           </form>
 
           <section class="result-reference-panel" aria-label="昨收固定价外参考点位">
-            <div class="section-head">
+            <div class="section-head reference-head">
               <h2>昨收固定价外参考点位</h2>
-              <p>基于 SPX 昨收，额外给出固定涨跌幅的参考价位，便于快速对照常用 OTM 距离。</p>
             </div>
 
             <div class="reference-table-wrap">
@@ -93,11 +86,6 @@
         </section>
 
         <section class="card result-card">
-          <div class="section-head">
-            <h2>今日结果</h2>
-            <p>主结果默认显示“精确公式点位”，并同时给出两种 5 点取整口径作参考。</p>
-          </div>
-
           <div class="headline-result">
             <div>
               <p class="label">策略方向</p>
@@ -128,7 +116,6 @@
             <article class="mini-card">
               <p class="label">精确公式点位</p>
               <strong id="exact-point-card">-</strong>
-              <span>直接使用公式输出，不做行权价取整</span>
             </article>
             <article class="mini-card accent">
               <p class="label">向外保守 5 点</p>
