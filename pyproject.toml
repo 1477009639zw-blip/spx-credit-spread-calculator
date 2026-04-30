@@ -1,0 +1,21 @@
+[project]
+name = "spx-0dte-backtester"
+version = "0.1.0"
+description = "Local Streamlit tool for SPX 0DTE minute-level option strategy backtests."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "pandas>=2.0",
+    "pyarrow>=14.0",
+    "streamlit>=1.32",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
